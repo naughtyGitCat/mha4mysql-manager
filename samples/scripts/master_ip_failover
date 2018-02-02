@@ -24,13 +24,16 @@ use warnings FATAL => 'all';
 
 use Getopt::Long;
 use MHA::DBHelper;
-
+#自定义该组机器的vip
+my $vip = "192.168.1.100";
+my $if = "eth0";
 my (
   $command,        $ssh_user,         $orig_master_host,
   $orig_master_ip, $orig_master_port, $new_master_host,
   $new_master_ip,  $new_master_port,  $new_master_user,
   $new_master_password
 );
+
 GetOptions(
   'command=s'             => \$command,
   'ssh_user=s'            => \$ssh_user,
@@ -44,6 +47,11 @@ GetOptions(
   'new_master_password=s' => \$new_master_password,
 );
 
+sub add_vip {
+	my $output1 = `ssh -o ConnectTimeout=15  -o ConnectionAttempts=3 $orig_master_host /sbin/ip addr del $vip/32 dev $if`;
+	my $output2 = `ssh -o ConnectTimeout=15  -o ConnectionAttempts=3 $new_master_host /sbin/ip addr add $vip/32 dev $if`;
+
+}
 exit &main();
 
 sub main {
@@ -84,14 +92,13 @@ sub main {
       $new_master_handler->disable_read_only();
 
       ## Creating an app user on the new master
-      print "Creating app user on the new master..\n";
-      FIXME_xxx_create_user( $new_master_handler->{dbh} );
+      #print "Creating app user on the new master..\n";
+      #FIXME_xxx_create_user( $new_master_handler->{dbh} );
       $new_master_handler->enable_log_bin_local();
       $new_master_handler->disconnect();
 
       ## Update master ip on the catalog database, etc
-      FIXME_xxx;
-
+      &add_vip();
       $exit_code = 0;
     };
     if ($@) {
@@ -117,4 +124,3 @@ sub usage {
   print
 "Usage: master_ip_failover --command=start|stop|stopssh|status --orig_master_host=host --orig_master_ip=ip --orig_master_port=port --new_master_host=host --new_master_ip=ip --new_master_port=port\n";
 }
-
